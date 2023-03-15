@@ -1,0 +1,65 @@
+---
+title: "BIOL432_Assignment9"
+author: "Edward Chen"
+date: "`r Sys.Date()`"
+output: html_document
+---
+https://github.com/DwardEE
+
+```{r, warning = FALSE, message = FALSE}
+library("doParallel")
+library("parallel")
+```
+
+```{r}
+# Number of Cores
+detectCores()
+```
+
+```{r}
+# Calculate the speedup for a given number of threads
+calculate_speedup <- function(num_threads) {
+  # Fraction of program that can be parallelized
+  P <- 1
+  
+  # Maximum speedup according to Amdahl's law
+  S <- 1 / (1 - P + P/num_threads)
+  
+  # Return the speedup as a percentage
+  return(S * 100)
+}
+
+# Example usage: calculate speedup for 4 threads
+speedup <- calculate_speedup(detectCores())
+print(paste("Speedup with 4 threads:", round(speedup, 2), "%"))
+```
+
+```{r}
+before_time <- Sys.time()
+for(i in 1:4000){
+  mean(rnorm(100000, mean = 10, sd = 3))
+}
+after_time <- Sys.time()
+print(after_time - before_time)
+```
+
+Assuming that the device can take advantage of all 12 cores, then the predicted output will be produced 12 times faster through running the code in parallel. This is based on the Amdahl's law: S = 1 / (1 - P + P/N) where S is the maximum speedup possible based on using N cores with P being the fraction of the code that can be parallelized. Assuming the entire program is parallelizable, then the increase would be 1200% or 12 times faster.
+
+Pertaining to the specific code we were asked to run, since each iteration of the loop is independent and can be executed in parallel, we can divide the loop into 12 chunks, each containing 333 iterations, and execute them in parallel.
+
+```{r}
+Cores <- parallel::makeCluster(detectCores())
+doParallel::registerDoParallel(Cores)
+
+before_time <- Sys.time()
+foreach(i = 1:4000, .combine = "c") %dopar% {
+  mean(rnorm(100000, mean = 10, sd = 3))
+}
+after_time <- Sys.time()
+
+parallel::stopCluster(Cores)
+
+print(after_time - before_time)
+```
+
+The actual time saved through parallel processing is significantly less that what was theorized, and this is most likely due to the overhead costs that come with synchronizing processors which is not present in serial computing.
